@@ -6,6 +6,7 @@ public class PlayerController : MonoBehaviour
 {
     private InputSystem_Actions _playerInputActions;
     private CharacterController _characterController;
+    private Animator _animator;
 
     private Vector3 _input;
     [SerializeField] private float speed = 10f;
@@ -14,6 +15,7 @@ public class PlayerController : MonoBehaviour
     {
         _playerInputActions = new InputSystem_Actions();
         _characterController = GetComponent<CharacterController>();
+        _animator = GetComponent<Animator>();
     }
 
     private void OnEnable()
@@ -50,6 +52,7 @@ public class PlayerController : MonoBehaviour
     {
         Vector3 moveDirection = transform.forward * speed * _input.magnitude * Time.deltaTime;
 
+        // _animator.SetBool("Walking", true);
         _characterController.Move(moveDirection);
     }
 
@@ -57,5 +60,10 @@ public class PlayerController : MonoBehaviour
     {
         Vector2 input = _playerInputActions.Player.Move.ReadValue<Vector2>();
         _input = new Vector3(input.x, 0, input.y);
+
+        if (_input != Vector3.zero)
+            _animator.SetBool("Walking", true);
+        else
+            _animator.SetBool("Walking", false);
     }
 }
