@@ -57,7 +57,6 @@ public class PlayerController : MonoBehaviour
                 if (_lookInput.sqrMagnitude > 0.01f)
                 {
                     Vector2 rotatedInput = new Vector2(_lookInput.y, -_lookInput.x);
-                    // direction = new Vector3(_lookInput.x, 0, _lookInput.y);
                     direction = new Vector3(rotatedInput.x, 0, rotatedInput.y);
                 }
                 else
@@ -69,10 +68,19 @@ public class PlayerController : MonoBehaviour
             /* MOUSE AIMING */
             else if (mouseTrackerObject != null)
             {
-                direction = mouseTrackerObject.transform.position - transform.position;
-                direction.y = 0;
+                Vector3 rawDirection = mouseTrackerObject.transform.position - transform.position;
+                rawDirection.y = 0;
 
-                if (direction.magnitude < 0.5f) direction = transform.forward; // Keep current direction if mouse is too close
+                if (rawDirection.magnitude > 0.5f)
+                {
+                    float angle = 45f;
+                    Quaternion offsetRotation = Quaternion.Euler(0, angle, 0);
+                    direction = offsetRotation * rawDirection;
+                }
+                else
+                {
+                    direction = transform.forward;
+                }
             }
         }
         else
