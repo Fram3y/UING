@@ -56,7 +56,9 @@ public class PlayerController : MonoBehaviour
 
                 if (_lookInput.sqrMagnitude > 0.01f)
                 {
-                    direction = new Vector3(_lookInput.x, 0, _lookInput.y);
+                    Vector2 rotatedInput = new Vector2(_lookInput.y, -_lookInput.x);
+                    // direction = new Vector3(_lookInput.x, 0, _lookInput.y);
+                    direction = new Vector3(rotatedInput.x, 0, rotatedInput.y);
                 }
                 else
                 {
