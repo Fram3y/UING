@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     // Components
-    private InputSystem_Actions _playerInputActions;
+    private PlayerInput _playerInput;
     private CharacterController _characterController;
     private Animator _animator;
 
@@ -19,21 +19,14 @@ public class PlayerController : MonoBehaviour
     private bool _attackMode;
     [SerializeField] private float speed = 10f;
 
+    [Header("Mouse Tracking")]
+    [SerializeField] private GameObject mouseTrackerObject;
+
     private void Awake()
     {
-        _playerInputActions = new InputSystem_Actions();
+        _playerInput = GetComponent<PlayerInput>();
         _characterController = GetComponent<CharacterController>();
         _animator = GetComponent<Animator>();
-    }
-
-    private void OnEnable()
-    {
-        _playerInputActions.Player.Enable();
-    }
-
-    private void OnDisable()
-    {
-        _playerInputActions.Player.Disable();
     }
 
     private void Update()
@@ -45,49 +38,47 @@ public class PlayerController : MonoBehaviour
         Move();
     }
 
-
-    // Code for twin stick attack mode looking behaviour - bug with mouse version inputs
+    /* TWIN STICK STYLE LOOK FUNCTION */
     private void Look()
     {
         Vector3 direction = _lastLookDirection;
 
+        /* ATTACK STATE CHECK TO ALLOW FOR LOOK CODE TO FUNCTION */
         if (_attackMode)
         {
-            // Controller aiming (right stick)
-            if (_lookInput.sqrMagnitude > 0.01f)
+            speed = 1.25f;
+            bool isUsingController = _playerInput.currentControlScheme == "Gamepad";
+
+            /* CONTROLLER AIMING */
+            if (isUsingController)
             {
-                direction = new Vector3(_lookInput.x, 0, _lookInput.y);
-            }
-            // Mouse aiming (only if the mouse moved)
-            else if (Mouse.current != null)
-            {
-                // Get mouse position in screen space
-                Vector2 mousePos = Mouse.current.position.ReadValue();
+                _lookInput = _playerInput.actions["Look"].ReadValue<Vector2>();
 
-                // Create a plane at the player's height
-                Plane playerPlane = new Plane(Vector3.up, transform.position);
-
-                // Ray from camera through mouse position
-                Ray ray = Camera.main.ScreenPointToRay(mousePos);
-
-                if (playerPlane.Raycast(ray, out float enter))
+                if (_lookInput.sqrMagnitude > 0.01f)
                 {
-                    Vector3 hitPoint = ray.GetPoint(enter);
-                    direction = hitPoint - transform.position;
-                    direction.y = 0; // Flatten to horizontal
-                    direction = ToIsometric(direction); // Apply isometric rotation
+                    direction = new Vector3(_lookInput.x, 0, _lookInput.y);
                 }
+                else
+                {
+                    direction = _lastLookDirection;
+                    if (direction.sqrMagnitude < 0.001f) direction = transform.forward;
+                }
+            }
+            /* MOUSE AIMING */
+            else if (mouseTrackerObject != null)
+            {
+                direction = mouseTrackerObject.transform.position - transform.position;
+                direction.y = 0;
+
+                if (direction.magnitude < 0.5f) direction = transform.forward; // Keep current direction if mouse is too close
             }
         }
         else
         {
+            speed = 2;
             direction = _lastMoveDirection;
 
-            if (direction.sqrMagnitude > 0.001f)
-            {
-                // Convert movement vector to isometric
-                direction = ToIsometric(direction);
-            }
+            if (direction.sqrMagnitude > 0.001f) direction = ToIsometric(direction);
         }
 
         if (direction.sqrMagnitude < 0.001f) return;
@@ -103,31 +94,57 @@ public class PlayerController : MonoBehaviour
         );
     }
 
+    /* MOVE FUNCTION BASED ON ISOMETRIC MATRIX TRANSLATION */
     private void Move()
     {
-        // Convert input to world-space isometric direction
         Matrix4x4 isoMatrix = Matrix4x4.Rotate(Quaternion.Euler(0, 45, 0));
         Vector3 moveDirection = isoMatrix.MultiplyPoint3x4(_input);
 
         _characterController.Move(moveDirection * speed * Time.deltaTime);
     }
 
+    /* INPUT CHECK FOR EVERYTHING */
     private void GetInput()
     {
-        Vector2 input = _playerInputActions.Player.Move.ReadValue<Vector2>();
+        Vector2 input = _playerInput.actions["Move"].ReadValue<Vector2>();
         _input = new Vector3(input.x, 0, input.y);
 
-        _lookInput = _playerInputActions.Player.Look.ReadValue<Vector2>();
+        _lookInput = _playerInput.actions["Look"].ReadValue<Vector2>();
 
-        _attackMode = _playerInputActions.Player.AttackMode.IsPressed();
+        _attackMode = _playerInput.actions["AttackMode"].IsPressed();
 
         _animator.SetBool("AttackMode", _attackMode);
 
-        // Animations are set based on player input
+        float animatorDampTime = 0.1f;
+
+        /* CONVERT WORLD INPUT TO LOCAL SPACE RELATIVE TO PLAYER'S LOOK DIRECTION FOR ACCURATE MOVEMENTS */
+        if (_attackMode)
+        {
+            Vector3 playerForward = transform.forward;
+
+            Quaternion offsetRotation = Quaternion.Euler(0, -90f, 0);
+            playerForward = offsetRotation * playerForward;
+
+            playerForward.y = 0;
+            playerForward.Normalize();
+
+            Vector3 playerRight = Vector3.Cross(Vector3.up, playerForward).normalized;
+
+            float localX = Vector3.Dot(_input, playerRight);
+            float localY = Vector3.Dot(_input, playerForward);
+
+            _animator.SetFloat("InputX", localX, animatorDampTime, Time.deltaTime);
+            _animator.SetFloat("InputY", localY, animatorDampTime, Time.deltaTime);
+        }
+        else
+        {
+            _animator.SetFloat("InputX", input.x, animatorDampTime, Time.deltaTime);
+            _animator.SetFloat("InputY", input.y, animatorDampTime, Time.deltaTime);
+        }
+
         if (_input.magnitude > 0.1f)
         {
-            // We cache player's direction and create a buffer before idle state is triggered
-            // This fixes the idle frame flicker when moving from left to right quickly
+            /* CACHING PLAYER DIRECTION AND APPLYING IDLE BUFFER FOR JITTER */
             _lastMoveDirection = _input;
             _movementTimer = _movementBuffer;
         }
