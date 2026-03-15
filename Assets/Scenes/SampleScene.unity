@@ -208,7 +208,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -840037777384891287, guid: 548bb6b7a1686b841a0b4a31ea164284, type: 3}
+  - {fileID: 2100000, guid: 92e3a59947e33624181cb3d7dcc76e2f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -234,7 +234,7 @@ SkinnedMeshRenderer:
   m_Quality: 0
   m_UpdateWhenOffscreen: 0
   m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: -1525253381413818895, guid: 548bb6b7a1686b841a0b4a31ea164284, type: 3}
+  m_Mesh: {fileID: -1525253381413818895, guid: 3597af07ec005b544aa955975c480b24, type: 3}
   m_Bones:
   - {fileID: 1145351038}
   - {fileID: 81798293}
@@ -1674,7 +1674,7 @@ Animator:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1051568806}
   m_Enabled: 1
-  m_Avatar: {fileID: 9000000, guid: 548bb6b7a1686b841a0b4a31ea164284, type: 3}
+  m_Avatar: {fileID: 9000000, guid: 3597af07ec005b544aa955975c480b24, type: 3}
   m_Controller: {fileID: 9100000, guid: 68a25f5fdb246b64f8392ed3422fc317, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
@@ -1699,8 +1699,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1080cfc1fb104241899d5ceb0a7d048, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
-  speed: 2
   mouseTrackerObject: {fileID: 1508486695}
+  speed: 2
+  attackCooldown: 0.5
 --- !u!143 &1051568815
 CharacterController:
   m_ObjectHideFlags: 0
@@ -2520,7 +2521,7 @@ SkinnedMeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -4565884009001823619, guid: 548bb6b7a1686b841a0b4a31ea164284, type: 3}
+  - {fileID: 2100000, guid: 22ec8a1acfcca7b408f1323b3cee0ce2, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2546,7 +2547,7 @@ SkinnedMeshRenderer:
   m_Quality: 0
   m_UpdateWhenOffscreen: 0
   m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: 4777371684598551356, guid: 548bb6b7a1686b841a0b4a31ea164284, type: 3}
+  m_Mesh: {fileID: 4777371684598551356, guid: 3597af07ec005b544aa955975c480b24, type: 3}
   m_Bones:
   - {fileID: 1145351038}
   - {fileID: 81798293}

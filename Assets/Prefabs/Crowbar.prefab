@@ -11,7 +11,8 @@ GameObject:
   - component: {fileID: 3674332119961803942}
   - component: {fileID: 601008983448793771}
   - component: {fileID: 3000968020698917309}
-  - component: {fileID: 7621709144464616044}
+  - component: {fileID: 8886918705398031573}
+  - component: {fileID: 2883518895280703522}
   m_Layer: 0
   m_Name: Crowbar
   m_TagString: Untagged
@@ -90,25 +91,36 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!95 &7621709144464616044
-Animator:
-  serializedVersion: 7
+--- !u!135 &8886918705398031573
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8841100809218238378}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.08
+  m_Center: {x: 0.27, y: 0, z: 0}
+--- !u!114 &2883518895280703522
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8841100809218238378}
   m_Enabled: 1
-  m_Avatar: {fileID: 9000000, guid: 360bed210c67fd64daba72af0aa7ba7f, type: 3}
-  m_Controller: {fileID: 0}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_AnimatePhysics: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: faf2d4692d2c6d94ea3301a78a719c6c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Crowbar

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -12,15 +13,24 @@ public class PlayerController : MonoBehaviour
     // Input Variables
     private Vector3 _input;
     private Vector2 _lookInput;
-    private Vector3 _lastMoveDirection;
-    private Vector3 _lastLookDirection;
-    private float _movementBuffer = 0.1f;
-    private float _movementTimer;
-    private bool _attackMode;
-    [SerializeField] private float speed = 10f;
 
     [Header("Mouse Tracking")]
     [SerializeField] private GameObject mouseTrackerObject;
+    private Vector3 _lastMoveDirection;
+    private Vector3 _lastLookDirection;
+
+    [Header("Movement Settings")]
+    [SerializeField] private float speed = 10f;
+    private float _movementBuffer = 0.1f;
+    private float _movementTimer;
+    private Vector3 _lockedLookDirection;
+
+    [Header("Attack Settings")]
+    [SerializeField] private float attackCooldown = 0.5f;
+    private bool _attackMode;
+    private float lastAttackTime;
+    private bool _canAttack = true;
+    private Coroutine attackCooldownRoutine;
 
     private void Awake()
     {
@@ -43,16 +53,21 @@ public class PlayerController : MonoBehaviour
     {
         Vector3 direction = _lastLookDirection;
 
+        bool isAttacking = _animator.GetBool("Attacking");
+
         /* ATTACK STATE CHECK TO ALLOW FOR LOOK CODE TO FUNCTION */
         if (_attackMode)
         {
-            speed = 1.25f;
             bool isUsingController = _playerInput.currentControlScheme == "Gamepad";
 
-            /* CONTROLLER AIMING */
-            if (isUsingController)
+            if (isAttacking)
             {
-                _lookInput = _playerInput.actions["Look"].ReadValue<Vector2>();
+                direction = _lockedLookDirection;
+            }
+            /* CONTROLLER AIMING */
+            else if (isUsingController)
+            {
+                // _lookInput = _playerInput.actions["Look"].ReadValue<Vector2>();
 
                 if (_lookInput.sqrMagnitude > 0.01f)
                 {
@@ -85,7 +100,6 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            speed = 2;
             direction = _lastMoveDirection;
 
             if (direction.sqrMagnitude > 0.001f) direction = ToIsometric(direction);
@@ -110,7 +124,42 @@ public class PlayerController : MonoBehaviour
         Matrix4x4 isoMatrix = Matrix4x4.Rotate(Quaternion.Euler(0, 45, 0));
         Vector3 moveDirection = isoMatrix.MultiplyPoint3x4(_input);
 
+        bool _isAttcking = _animator.GetBool("Attacking");
+
+        if (_isAttcking || _attackMode)
+        {
+            speed = 1.25f;
+        }
+        else
+        {
+            speed = 2f;
+        }
+
         _characterController.Move(moveDirection * speed * Time.deltaTime);
+    }
+
+    /* SWING BATTA BATTA SWING BATTA */
+    private void PerformAttack()
+    {
+        _lockedLookDirection = _lastLookDirection;
+
+        if (_lockedLookDirection.sqrMagnitude < 0.001f) _lockedLookDirection = transform.forward;
+
+        _animator.SetBool("Attacking", true);
+
+        if (attackCooldownRoutine != null) StopCoroutine(attackCooldownRoutine);
+            
+        attackCooldownRoutine = StartCoroutine(AttackCooldown(1.5f));
+
+        lastAttackTime = Time.time;
+    }
+
+    private IEnumerator AttackCooldown(float attackLength)
+    {
+        _canAttack = false;
+        yield return new WaitForSeconds(attackLength);
+        _canAttack = true;
+        _animator.SetBool("Attacking", false);
     }
 
     /* INPUT CHECK FOR EVERYTHING */
@@ -122,6 +171,7 @@ public class PlayerController : MonoBehaviour
         _lookInput = _playerInput.actions["Look"].ReadValue<Vector2>();
 
         _attackMode = _playerInput.actions["AttackMode"].IsPressed();
+        bool attackPressed = _playerInput.actions["Attack"].WasPressedThisFrame();
 
         _animator.SetBool("AttackMode", _attackMode);
 
@@ -145,6 +195,12 @@ public class PlayerController : MonoBehaviour
 
             _animator.SetFloat("InputX", localX, animatorDampTime, Time.deltaTime);
             _animator.SetFloat("InputY", localY, animatorDampTime, Time.deltaTime);
+
+            /* CHECK FOR ATTACK WHEN IN ATTACK MODE */
+            if (attackPressed && _canAttack && Time.time > lastAttackTime + attackCooldown)
+            {
+                PerformAttack();
+            }
         }
         else
         {
