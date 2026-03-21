@@ -30,6 +30,7 @@ public class PlayerController : MonoBehaviour
     private Vector3 _lockedLookDirection;
     private Vector3 _verticalVelocity;
     private bool _isGrounded;
+    private bool _isRunning;
 
     [Header("Attack Settings")]
     [SerializeField] private float attackCooldown = 0.5f;
@@ -164,6 +165,10 @@ public class PlayerController : MonoBehaviour
         {
             speed = 1.25f;
         }
+        else if (_isRunning)
+        {
+            speed = 4f;
+        }
         else
         {
             speed = 2f;
@@ -173,7 +178,6 @@ public class PlayerController : MonoBehaviour
 
         Vector3 finalMovement = (moveDirection * speed) + _verticalVelocity;
 
-        // _characterController.Move(moveDirection * speed * Time.deltaTime);
         _characterController.Move(finalMovement * Time.deltaTime);
     }
 
@@ -212,7 +216,10 @@ public class PlayerController : MonoBehaviour
         _attackMode = _playerInput.actions["AttackMode"].IsPressed();
         bool attackPressed = _playerInput.actions["Attack"].WasPressedThisFrame();
 
+        _isRunning = _playerInput.actions["Sprint"].IsPressed();
+
         _animator.SetBool("AttackMode", _attackMode);
+        _animator.SetBool("Running", _isRunning);
 
         float animatorDampTime = 0.1f;
 
