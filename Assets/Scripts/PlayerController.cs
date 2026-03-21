@@ -55,8 +55,13 @@ public class PlayerController : MonoBehaviour
 
         bool isAttacking = _animator.GetBool("Attacking");
 
-        /* ATTACK STATE CHECK TO ALLOW FOR LOOK CODE TO FUNCTION */
-        if (_attackMode)
+        /* ATTACK STATE CHECK - LOCK DIRECTION DURING ACTIVE ATTACK */
+        if (isAttacking)
+        {
+            direction = _lockedLookDirection;
+        }
+        /* ATTACK MODE CHECK - ONLY ALLOW AIMING WHEN NOT ATTACKING */
+        else if (_attackMode)
         {
             bool isUsingController = _playerInput.currentControlScheme == "Gamepad";
 
@@ -67,8 +72,6 @@ public class PlayerController : MonoBehaviour
             /* CONTROLLER AIMING */
             else if (isUsingController)
             {
-                // _lookInput = _playerInput.actions["Look"].ReadValue<Vector2>();
-
                 if (_lookInput.sqrMagnitude > 0.01f)
                 {
                     Vector2 rotatedInput = new Vector2(_lookInput.y, -_lookInput.x);
@@ -148,7 +151,7 @@ public class PlayerController : MonoBehaviour
         _animator.SetBool("Attacking", true);
 
         if (attackCooldownRoutine != null) StopCoroutine(attackCooldownRoutine);
-            
+
         attackCooldownRoutine = StartCoroutine(AttackCooldown(1.5f));
 
         lastAttackTime = Time.time;
