@@ -21,9 +21,15 @@ public class PlayerController : MonoBehaviour
 
     [Header("Movement Settings")]
     [SerializeField] private float speed = 10f;
+    [SerializeField] private GameObject _groundCheck;
+    [SerializeField] private float gravity = -9.81f;
+    [SerializeField] private float groundCheckRadius = 0.2f;
+    [SerializeField] private LayerMask groundLayer = ~0;
     private float _movementBuffer = 0.1f;
     private float _movementTimer;
     private Vector3 _lockedLookDirection;
+    private Vector3 _verticalVelocity;
+    private bool _isGrounded;
 
     [Header("Attack Settings")]
     [SerializeField] private float attackCooldown = 0.5f;
@@ -43,9 +49,34 @@ public class PlayerController : MonoBehaviour
     {
         GetInput();
 
+        GroundCheck();
+
         Look();
 
         Move();
+    }
+
+    /* GROUND CHECK */
+    private void GroundCheck()
+    {
+        if (_groundCheck != null)
+        {
+            /* CHECK IF PLAYER IS CLOSE TO GROUND LAYER */
+            _isGrounded = Physics.CheckSphere(_groundCheck.transform.position, groundCheckRadius, groundLayer);
+
+            Debug.DrawRay(_groundCheck.transform.position, Vector3.down * groundCheckRadius, Color.red);
+        }
+        else
+        {
+            /* USE CHARACTER CONTROLLER'S BUILT IN GROUND CHECK IF WE CANNOT FIND OUR OWN */
+            _isGrounded = _characterController.isGrounded;
+        }
+
+        /* RESET VERTICAL VELOCITY WHEN GROUNDED */
+        if (_isGrounded && _verticalVelocity.y < 0)
+        {
+            _verticalVelocity.y = -2f;
+        }
     }
 
     /* TWIN STICK STYLE LOOK FUNCTION */
@@ -138,7 +169,12 @@ public class PlayerController : MonoBehaviour
             speed = 2f;
         }
 
-        _characterController.Move(moveDirection * speed * Time.deltaTime);
+        _verticalVelocity.y += gravity * Time.deltaTime;
+
+        Vector3 finalMovement = (moveDirection * speed) + _verticalVelocity;
+
+        // _characterController.Move(moveDirection * speed * Time.deltaTime);
+        _characterController.Move(finalMovement * Time.deltaTime);
     }
 
     /* SWING BATTA BATTA SWING BATTA */
