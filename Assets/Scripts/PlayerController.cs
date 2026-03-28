@@ -14,17 +14,17 @@ public class PlayerController : MonoBehaviour
     private Vector3 _input;
     private Vector2 _lookInput;
 
-    [Header("Mouse Tracking")]
-    [SerializeField] private GameObject mouseTrackerObject;
+    [Header("External Objects")]
+    [SerializeField] private GameObject _mouseTrackerObject;
     private Vector3 _lastMoveDirection;
     private Vector3 _lastLookDirection;
 
     [Header("Movement Settings")]
     [SerializeField] private float speed = 10f;
     [SerializeField] private GameObject _groundCheck;
-    [SerializeField] private float gravity = -9.81f;
-    [SerializeField] private float groundCheckRadius = 0.2f;
-    [SerializeField] private LayerMask groundLayer = ~0;
+    [SerializeField] private float _gravity = -9.81f;
+    [SerializeField] private float _groundCheckRadius = 0.2f;
+    [SerializeField] private LayerMask _groundLayer = ~0;
     private float _movementBuffer = 0.1f;
     private float _movementTimer;
     private Vector3 _lockedLookDirection;
@@ -63,9 +63,9 @@ public class PlayerController : MonoBehaviour
         if (_groundCheck != null)
         {
             /* CHECK IF PLAYER IS CLOSE TO GROUND LAYER */
-            _isGrounded = Physics.CheckSphere(_groundCheck.transform.position, groundCheckRadius, groundLayer);
+            _isGrounded = Physics.CheckSphere(_groundCheck.transform.position, _groundCheckRadius, _groundLayer);
 
-            Debug.DrawRay(_groundCheck.transform.position, Vector3.down * groundCheckRadius, Color.red);
+            Debug.DrawRay(_groundCheck.transform.position, Vector3.down * _groundCheckRadius, Color.red);
         }
         else
         {
@@ -116,9 +116,9 @@ public class PlayerController : MonoBehaviour
                 }
             }
             /* MOUSE AIMING */
-            else if (mouseTrackerObject != null)
+            else if (_mouseTrackerObject != null)
             {
-                Vector3 rawDirection = mouseTrackerObject.transform.position - transform.position;
+                Vector3 rawDirection = _mouseTrackerObject.transform.position - transform.position;
                 rawDirection.y = 0;
 
                 if (rawDirection.magnitude > 0.5f)
@@ -167,14 +167,14 @@ public class PlayerController : MonoBehaviour
         }
         else if (_isRunning)
         {
-            speed = 4f;
+            speed = 3.5f;
         }
         else
         {
             speed = 2f;
         }
 
-        _verticalVelocity.y += gravity * Time.deltaTime;
+        _verticalVelocity.y += _gravity * Time.deltaTime;
 
         Vector3 finalMovement = (moveDirection * speed) + _verticalVelocity;
 
