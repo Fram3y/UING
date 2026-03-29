@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.Accessibility;
 using UnityEngine.InputSystem;
 
 [RequireComponent(typeof(CharacterController))]
@@ -21,10 +22,16 @@ public class PlayerController : MonoBehaviour
 
     [Header("Movement Settings")]
     [SerializeField] private float speed = 10f;
+    public float _playerStamina = 100f;
+    private float _maxStamina = 100f;
+    [SerializeField] private float _staminaDrain = 0.15f;
+    [SerializeField] private float _staminaRegen = 0.01f;
+    private float _attackCost = 15f;
+    [HideInInspector] public bool _hasRegenerated = true;
     [SerializeField] private GameObject _groundCheck;
-    [SerializeField] private float _gravity = -9.81f;
-    [SerializeField] private float _groundCheckRadius = 0.2f;
     [SerializeField] private LayerMask _groundLayer = ~0;
+    private float _gravity = -9.81f;
+    private float _groundCheckRadius = 0.2f;
     private float _movementBuffer = 0.1f;
     private float _movementTimer;
     private Vector3 _lockedLookDirection;
@@ -38,6 +45,11 @@ public class PlayerController : MonoBehaviour
     private float lastAttackTime;
     private bool _canAttack = true;
     private Coroutine attackCooldownRoutine;
+
+    [Header("Exhaustion Settings")]
+    [SerializeField] private float _staminaRecoveryThreshold = 35f;
+    private bool _isExhausted = false;
+    private Coroutine _exhaustionRoutine;
 
     private void Awake()
     {
@@ -55,6 +67,42 @@ public class PlayerController : MonoBehaviour
         Look();
 
         Move();
+
+        HandleStamina();
+    }
+
+    private void HandleStamina()
+    {
+        if (_playerStamina >= _maxStamina) _playerStamina = _maxStamina;
+
+        if (_playerStamina <= 0f)
+        {
+            _playerStamina = 0f;
+
+            if (!_isExhausted)
+            {
+                _exhaustionRoutine = StartCoroutine(ExhaustedState());
+            }
+        }
+
+        float attackModeRegen = _staminaRegen / 2f;
+
+        // Exhausted players always regen at attack mode rate
+        if (_isExhausted)
+        {
+            _playerStamina += attackModeRegen * Time.deltaTime;
+        }
+        else
+        {
+            if (speed == 1.25f) _playerStamina += attackModeRegen * Time.deltaTime;
+            if (speed == 2f) _playerStamina += _staminaRegen * Time.deltaTime;
+            if (speed == 3.5f) _playerStamina -= _staminaDrain * Time.deltaTime;
+        }
+
+        if (CanvasController._instance != null)
+        {
+            CanvasController._instance.UpdateStaminaUI(_playerStamina, _maxStamina);
+        }
     }
 
     /* GROUND CHECK */
@@ -161,14 +209,17 @@ public class PlayerController : MonoBehaviour
 
         bool _isAttcking = _animator.GetBool("Attacking");
 
+        /* WHILE PLAYER IS IN ATTACK MODE PLAYER SPEED IS DECREASED */
         if (_isAttcking || _attackMode)
         {
             speed = 1.25f;
         }
+        /* SPRINTING INCREASES PLAYER SPEED BUT PLAYER LOSES STAMINA */
         else if (_isRunning)
         {
             speed = 3.5f;
         }
+        /* WHILE PLAYER IS WALKING STAMINA REGENERATES */
         else
         {
             speed = 2f;
@@ -190,6 +241,8 @@ public class PlayerController : MonoBehaviour
 
         _animator.SetBool("Attacking", true);
 
+        _playerStamina -= _attackCost;
+
         if (attackCooldownRoutine != null) StopCoroutine(attackCooldownRoutine);
 
         attackCooldownRoutine = StartCoroutine(AttackCooldown(1.5f));
@@ -205,6 +258,31 @@ public class PlayerController : MonoBehaviour
         _animator.SetBool("Attacking", false);
     }
 
+    private IEnumerator ExhaustedState()
+    {
+        _isExhausted = true;
+        _isRunning = false;
+        _canAttack = false;
+
+        Debug.Log("Player is exhausted!");
+
+        // Optional: cancel attack mode if you want
+        _attackMode = false;
+        _animator.SetBool("AttackMode", false);
+        _animator.SetBool("Running", false);
+
+        // Wait until stamina reaches threshold
+        while (_playerStamina < _staminaRecoveryThreshold)
+        {
+            yield return null;
+        }
+
+        _isExhausted = false;
+        _canAttack = true;
+
+        Debug.Log("Player has recovered from exhaustion.");
+    }
+
     /* INPUT CHECK FOR EVERYTHING */
     private void GetInput()
     {
@@ -213,10 +291,13 @@ public class PlayerController : MonoBehaviour
 
         _lookInput = _playerInput.actions["Look"].ReadValue<Vector2>();
 
-        _attackMode = _playerInput.actions["AttackMode"].IsPressed();
+        bool wantsAttackMode = _playerInput.actions["AttackMode"].IsPressed();
         bool attackPressed = _playerInput.actions["Attack"].WasPressedThisFrame();
+        bool wantsToSprint = _playerInput.actions["Sprint"].IsPressed();
 
-        _isRunning = _playerInput.actions["Sprint"].IsPressed();
+        // Block attack mode and sprint while exhausted
+        _attackMode = !_isExhausted && wantsAttackMode;
+        _isRunning = !_isExhausted && wantsToSprint;
 
         _animator.SetBool("AttackMode", _attackMode);
         _animator.SetBool("Running", _isRunning);
@@ -243,7 +324,7 @@ public class PlayerController : MonoBehaviour
             _animator.SetFloat("InputY", localY, animatorDampTime, Time.deltaTime);
 
             /* CHECK FOR ATTACK WHEN IN ATTACK MODE */
-            if (attackPressed && _canAttack && Time.time > lastAttackTime + attackCooldown)
+            if (attackPressed && !_isExhausted && _canAttack && Time.time > lastAttackTime + attackCooldown)
             {
                 PerformAttack();
             }
