@@ -3,10 +3,27 @@ using UnityEngine.InputSystem;
 
 public class MousePositionFollower : MonoBehaviour
 {
+    /* DDOL INSTANCE CHECK */
+    public static MousePositionFollower _instance;
+
     [SerializeField] private LayerMask groundLayer = 1;
     [SerializeField] private float maxDistance = 100f;    
     private Camera mainCamera;
     private Mouse mouse;
+
+    private void Awake()
+    {
+        // If there is already a MousePositionFollower, destroy this duplicate
+        if (_instance != null && _instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        // Otherwise, this becomes the persistent instance
+        _instance = this;
+        DontDestroyOnLoad(gameObject);
+    }
     
     private void Start()
     {

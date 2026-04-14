@@ -5,6 +5,8 @@ using UnityEngine.InputSystem;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
+    public static PlayerController _instance;
+
     // Components
     private PlayerInput _playerInput;
     private CharacterController _characterController;
@@ -55,6 +57,16 @@ public class PlayerController : MonoBehaviour
         _playerInput = GetComponent<PlayerInput>();
         _characterController = GetComponent<CharacterController>();
         _animator = GetComponent<Animator>();
+
+        if (_instance != null && _instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
+        // Otherwise, this becomes the persistent instance
+        _instance = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     private void Start()
