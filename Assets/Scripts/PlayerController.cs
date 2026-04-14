@@ -170,6 +170,7 @@ public class PlayerController : MonoBehaviour
         {
             bool isUsingController = _playerInput.currentControlScheme == "Gamepad";
 
+            /* MANUAL CHECK  */
             if (isUsingController)
             {
                 if (_lookInput.sqrMagnitude > 0.01f)
@@ -185,6 +186,7 @@ public class PlayerController : MonoBehaviour
                     rawAimDirection = direction;
                 }
             }
+            /* MOUSE CONTROLS */
             else if (_mouseTrackerObject != null)
             {
                 Vector3 rawDirection = _mouseTrackerObject.transform.position - transform.position;
@@ -205,13 +207,13 @@ public class PlayerController : MonoBehaviour
                 }
             }
         }
-        else // Normal movement
+        else /* NORMAL MOVEMENT WITHOUT ATTACK MODE TWINSTICK */
         {
             direction = _lastMoveDirection;
             if (direction.sqrMagnitude > 0.001f)
             {
                 direction = ToIsometric(direction);
-                rawAimDirection = direction; // Normal mode faces movement direction
+                rawAimDirection = direction;
             }
             else
             {
@@ -222,26 +224,27 @@ public class PlayerController : MonoBehaviour
 
         if (direction.sqrMagnitude < 0.001f) return;
 
+        /* STORING BOTH NON AND POST VISUAL OFFSET FOR ATTACK AREA BUG FIX */
         _lastLookDirection = direction;
-        _rawLookDirection = rawAimDirection; // Store for interact area
+        _rawLookDirection = rawAimDirection;
 
         Quaternion rotation = Quaternion.LookRotation(direction, Vector3.up);
         transform.rotation = Quaternion.Slerp(transform.rotation, rotation, 20f * Time.deltaTime);
     }
 
+    /* FUNCTION ADDED TO HANDLE PLAYER HTIBOX MOVEMENT TO FIX VISUAL BUG */
     private void UpdateInteractArea()
     {
         if (_interactArea == null) return;
 
-        // Use raw aim direction (default to player forward if not set)
+        /* RAW AIM SET IN LOOK FUNCTION AND THEN APPLIED AS DIRECTION FOR HITBOX */
         Vector3 forward = _rawLookDirection;
         if (forward.sqrMagnitude < 0.001f) forward = transform.forward;
         else forward.Normalize();
 
-        // Position: player position + forward offset + upward offset
+        /* HITBOX FOLLOWS PLAYER'S POSITION SO POSITIONAL OFFSET IS ADDED TO MAKE SURE THE HITBOX LINES UP WITH INTERACTABLE OBJECTS */
         _interactArea.position = transform.position + forward * _interactDistance + Vector3.up * _interactHeight;
 
-        // Rotation: face the raw aim direction
         _interactArea.rotation = Quaternion.LookRotation(forward, Vector3.up);
     }
 
@@ -279,16 +282,18 @@ public class PlayerController : MonoBehaviour
     /* SWING BATTA BATTA SWING BATTA */
     private void PerformAttack()
     {
+        /* ATTACK DURATION CHANGES IF PLAYER IS EXHAUSTED */
         float attackDuration;
         if (!_isExhausted) attackDuration = 1.8f;
         else attackDuration = 2.4f;
 
-        // Store the visual direction (with 45° offset)
+        /* STORING LOOK DIRECTION FOR NON AND POST VISUAL OFFSET TO FIX VISUAL BUG WITH PLAYER HIT AREA */
+        /* 45 DEGREE IS APPLIED TO PLAYER LOOK DIRECTION */
         _lockedLookDirection = _lastLookDirection.normalized;
         if (_lockedLookDirection.sqrMagnitude < 0.001f)
             _lockedLookDirection = transform.forward;
 
-        // Store the raw aim direction (no offset)
+        /* ORIGINAL LOOK DIRECTION IS APPLIED TO HIT AREA TO MAKE SURE THE HITBOX AREA IS CONSISTENT */
         _lockedRawLookDirection = _rawLookDirection.normalized;
         if (_lockedRawLookDirection.sqrMagnitude < 0.001f)
             _lockedRawLookDirection = transform.forward;
@@ -303,6 +308,7 @@ public class PlayerController : MonoBehaviour
         lastAttackTime = Time.time;
     }
 
+    /* ATTACK COOLDOWN TO PREVENT SPAM ATTACK */
     private IEnumerator AttackCooldown(float attackLength)
     {
         _canAttack = false;
@@ -311,25 +317,20 @@ public class PlayerController : MonoBehaviour
         _animator.SetBool("Attacking", false);
     }
 
+    /* EXHAUSTED STATE TIMER */
     private IEnumerator ExhaustedState()
     {
         _isExhausted = true;
-
         _animator.SetBool("Exhausted", _isExhausted);
 
-        Debug.Log("Player is exhausted!");
-
-        // Wait until stamina reaches threshold
+        /* WHEN PLAYER HAS RECOVERED 1/3 OF THEIR STAMINA EXHAUSTION ENDS */
         while (_playerStamina < _staminaRecoveryThreshold)
         {
             yield return null;
         }
 
         _isExhausted = false;
-
         _animator.SetBool("Exhausted", _isExhausted);
-
-        Debug.Log("Player has recovered from exhaustion.");
     }
 
     /* INPUT CHECK FOR EVERYTHING */
@@ -398,6 +399,7 @@ public class PlayerController : MonoBehaviour
         _animator.SetBool("Walking", _movementTimer > 0);
     }
 
+    /* UTILITY FUNCTION FOR ISOMETRIC ROTATION */
     private Vector3 ToIsometric(Vector3 input)
     {
         Matrix4x4 isoMatrix = Matrix4x4.Rotate(Quaternion.Euler(0, 45, 0));
