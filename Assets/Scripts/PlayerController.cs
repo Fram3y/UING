@@ -18,8 +18,14 @@ public class PlayerController : MonoBehaviour
 
     [Header("External Objects")]
     [SerializeField] private GameObject _mouseTrackerObject;
+    [SerializeField] private Transform _interactArea;
+    [SerializeField] private float _interactDistance = 1.5f;
+    [SerializeField] private float _interactHeight = 1.0f;
     private Vector3 _lastMoveDirection;
     private Vector3 _lastLookDirection;
+    private Vector3 _lockedRawLookDirection; // Raw aim direction during attack
+    private Vector3 _rawLookDirection;
+    public Vector3 InteractForward => _rawLookDirection;
 
     [Header("Movement Settings")]
     [SerializeField] private float speed = 10f;
@@ -72,8 +78,7 @@ public class PlayerController : MonoBehaviour
     private void Start()
     {
         // Ensure animator starts with correct exhaustion state
-        if (_animator != null)
-            _animator.SetBool("Exhausted", _isExhausted);
+        if (_animator != null) _animator.SetBool("Exhausted", _isExhausted);
     }
 
     private void Update()
@@ -87,6 +92,8 @@ public class PlayerController : MonoBehaviour
         Move();
 
         HandleStamina();
+
+        UpdateInteractArea();
     }
 
     private void HandleStamina()
@@ -150,38 +157,34 @@ public class PlayerController : MonoBehaviour
     private void Look()
     {
         Vector3 direction = _lastLookDirection;
+        Vector3 rawAimDirection = transform.forward;
 
         bool isAttacking = _animator.GetBool("Attacking");
 
-        /* ATTACK STATE CHECK - LOCK DIRECTION DURING ACTIVE ATTACK */
         if (isAttacking)
         {
             direction = _lockedLookDirection;
+            rawAimDirection = _lockedRawLookDirection;
         }
-        /* ATTACK MODE CHECK - ONLY ALLOW AIMING WHEN NOT ATTACKING */
         else if (_attackMode)
         {
             bool isUsingController = _playerInput.currentControlScheme == "Gamepad";
 
-            if (isAttacking)
-            {
-                direction = _lockedLookDirection;
-            }
-            /* CONTROLLER AIMING */
-            else if (isUsingController)
+            if (isUsingController)
             {
                 if (_lookInput.sqrMagnitude > 0.01f)
                 {
                     Vector2 rotatedInput = new Vector2(_lookInput.y, -_lookInput.x);
                     direction = new Vector3(rotatedInput.x, 0, rotatedInput.y);
+                    rawAimDirection = direction;
                 }
                 else
                 {
                     direction = _lastLookDirection;
                     if (direction.sqrMagnitude < 0.001f) direction = transform.forward;
+                    rawAimDirection = direction;
                 }
             }
-            /* MOUSE AIMING */
             else if (_mouseTrackerObject != null)
             {
                 Vector3 rawDirection = _mouseTrackerObject.transform.position - transform.position;
@@ -189,34 +192,57 @@ public class PlayerController : MonoBehaviour
 
                 if (rawDirection.magnitude > 0.5f)
                 {
+                    rawAimDirection = rawDirection.normalized;
+
                     float angle = 45f;
                     Quaternion offsetRotation = Quaternion.Euler(0, angle, 0);
-                    direction = offsetRotation * rawDirection;
+                    direction = (offsetRotation * rawDirection).normalized;
                 }
                 else
                 {
                     direction = transform.forward;
+                    rawAimDirection = direction;
                 }
             }
         }
-        else
+        else // Normal movement
         {
             direction = _lastMoveDirection;
-
-            if (direction.sqrMagnitude > 0.001f) direction = ToIsometric(direction);
+            if (direction.sqrMagnitude > 0.001f)
+            {
+                direction = ToIsometric(direction);
+                rawAimDirection = direction; // Normal mode faces movement direction
+            }
+            else
+            {
+                direction = transform.forward;
+                rawAimDirection = direction;
+            }
         }
 
         if (direction.sqrMagnitude < 0.001f) return;
 
         _lastLookDirection = direction;
+        _rawLookDirection = rawAimDirection; // Store for interact area
 
         Quaternion rotation = Quaternion.LookRotation(direction, Vector3.up);
+        transform.rotation = Quaternion.Slerp(transform.rotation, rotation, 20f * Time.deltaTime);
+    }
 
-        transform.rotation = Quaternion.Slerp(
-            transform.rotation,
-            rotation,
-            20f * Time.deltaTime
-        );
+    private void UpdateInteractArea()
+    {
+        if (_interactArea == null) return;
+
+        // Use raw aim direction (default to player forward if not set)
+        Vector3 forward = _rawLookDirection;
+        if (forward.sqrMagnitude < 0.001f) forward = transform.forward;
+        else forward.Normalize();
+
+        // Position: player position + forward offset + upward offset
+        _interactArea.position = transform.position + forward * _interactDistance + Vector3.up * _interactHeight;
+
+        // Rotation: face the raw aim direction
+        _interactArea.rotation = Quaternion.LookRotation(forward, Vector3.up);
     }
 
     /* MOVE FUNCTION BASED ON ISOMETRIC MATRIX TRANSLATION */
@@ -253,23 +279,27 @@ public class PlayerController : MonoBehaviour
     /* SWING BATTA BATTA SWING BATTA */
     private void PerformAttack()
     {
-        /* EXHAUSTION CHECK FOR VISUAL AND LOGIC CONSISTENCY */
         float attackDuration;
         if (!_isExhausted) attackDuration = 1.8f;
         else attackDuration = 2.4f;
 
-        _lockedLookDirection = _lastLookDirection;
+        // Store the visual direction (with 45° offset)
+        _lockedLookDirection = _lastLookDirection.normalized;
+        if (_lockedLookDirection.sqrMagnitude < 0.001f)
+            _lockedLookDirection = transform.forward;
 
-        if (_lockedLookDirection.sqrMagnitude < 0.001f) _lockedLookDirection = transform.forward;
+        // Store the raw aim direction (no offset)
+        _lockedRawLookDirection = _rawLookDirection.normalized;
+        if (_lockedRawLookDirection.sqrMagnitude < 0.001f)
+            _lockedRawLookDirection = transform.forward;
 
         _animator.SetBool("Attacking", true);
-
         _playerStamina -= _attackCost;
 
-        if (attackCooldownRoutine != null) StopCoroutine(attackCooldownRoutine);
+        if (attackCooldownRoutine != null)
+            StopCoroutine(attackCooldownRoutine);
 
         attackCooldownRoutine = StartCoroutine(AttackCooldown(attackDuration));
-
         lastAttackTime = Time.time;
     }
 
@@ -284,7 +314,7 @@ public class PlayerController : MonoBehaviour
     private IEnumerator ExhaustedState()
     {
         _isExhausted = true;
-        
+
         _animator.SetBool("Exhausted", _isExhausted);
 
         Debug.Log("Player is exhausted!");
@@ -296,7 +326,7 @@ public class PlayerController : MonoBehaviour
         }
 
         _isExhausted = false;
-        
+
         _animator.SetBool("Exhausted", _isExhausted);
 
         Debug.Log("Player has recovered from exhaustion.");
